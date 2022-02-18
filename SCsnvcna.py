@@ -450,8 +450,7 @@ def init(D, theta, sigma, tree, snvs, beta_parameters):
     #print(K)
     P_M = 1/K
     trees = [None] * 11
-
-    for i in range(11):
+    for i in range(11):#
         trees[i] = copy.deepcopy(tree)
         trees[i].snvs = copy.deepcopy(snvs)
         trees[i].G = copy.deepcopy(G)
@@ -477,7 +476,7 @@ def init(D, theta, sigma, tree, snvs, beta_parameters):
     return  P_G, P_G0, trees[10]
 # function to calculate the probability of a model given the placement of cells
 def getP(tree, D, G, D_bar, D_hat, theta, sigma, P_M, cells, snvs):
-    P = 1
+    P = 0
     for j in range(len(D[0])):#for each snv
         p_dm = getP_DMK(D_bar[j], D_hat[j], sigma)
         p_cm = 1
@@ -486,13 +485,15 @@ def getP(tree, D, G, D_bar, D_hat, theta, sigma, P_M, cells, snvs):
             p_cm *= (temp)
 
         top = p_dm * P_M * p_cm
-        if top <= 1**-300:
-            top = 1**300
+        #print("j is " + str(j) + " top is " + str(top) + " pcm is " + str(p_cm) + " p_dm is " + str(p_dm))
+        if top < 10**-300:
+            #print("flag " + str(10**-300))
+            top = 10**-300
         K = len(tree.nodes) - 1
         total = 0
         pdms = []
         pcms = []
-       
+        #print("j is " + str(j) + " top is " + str(top) + " pcm is " + str(p_cm) + " p_dm is " + str(p_dm))
         for x in range(K):#for each edge
             D_hat_temp = tree.nodes[x].perc
             if(snvs[j].edge == x):
@@ -507,17 +508,21 @@ def getP(tree, D, G, D_bar, D_hat, theta, sigma, P_M, cells, snvs):
                 if(temp <= 0):
                     print("DEBUG temp " + str(temp))
                 p_cm1 *= (temp)
+            #print("edge is " + str(x) + " top is " + str(top) + " pcm is " + str(p_cm1) + " p_dm is " + str(p_dmk))
             
             temp = p_dmk * p_cm1 * P_M 
-            if(temp <= 1**-300):
-                temp = 1**-300
+            #print("temp is " + str(temp))
+            if(temp < 10**-300):
+                temp = 10**-300
             total = total + temp
+            
             pdms.append(p_dmk)
             pcms.append(p_cm1)
-
+        #print("top is " + str(top))
         temp = top / total
 
-        P *= temp
+        P += np.log(temp)
+        #print("P is " + str(P))
     return P
 
 # this functin get G from the cell placement
@@ -607,20 +612,20 @@ def jointP(tree, beta_parameters):
     num_non_snv = n * m - X - num_snv
     P_G = (num_snv - num_snv * tree.theta[0] + num_non_snv * tree.theta[1]) / (num_non_snv + num_snv)
     
-    P_DGtheta = 1
+    P_DGtheta = 0
     for i in range(n):
         for j in range(m):
-            P_DGtheta *= getP_DG(tree.theta, tree.D[i][j], tree.G[i][j])
+            P_DGtheta += np.log(getP_DG(tree.theta, tree.D[i][j], tree.G[i][j]))
     P_M = 1 / (len(tree.nodes) - 1)
 
-    P_MGCsigma = getP(tree, tree.D, tree.G, tree.D_bar, tree.D_hat, tree.theta, tree.sigma, P_M, tree.cells, tree.snvs)
-    P_alpha = get_beta(tree.theta[0], beta_parameters[0][0], beta_parameters[0][1])
-    P_beta = get_beta(tree.theta[1], beta_parameters[1][0], beta_parameters[1][1])
-    P_gamma = get_beta(tree.theta[2], beta_parameters[2][0], beta_parameters[2][1])
-    P_sigma = get_beta(tree.sigma, beta_parameters[3][0], beta_parameters[3][1])
-    P = P_DGtheta * P_MGCsigma * P_alpha * P_beta * P_gamma * P_C * P_sigma * P_G
+    P_MGCsigma = (getP(tree, tree.D, tree.G, tree.D_bar, tree.D_hat, tree.theta, tree.sigma, P_M, tree.cells, tree.snvs))
+    P_alpha = np.log(get_beta(tree.theta[0], beta_parameters[0][0], beta_parameters[0][1]))
+    P_beta = np.log(get_beta(tree.theta[1], beta_parameters[1][0], beta_parameters[1][1]))
+    P_gamma = np.log(get_beta(tree.theta[2], beta_parameters[2][0], beta_parameters[2][1]))
+    P_sigma = np.log(get_beta(tree.sigma, beta_parameters[3][0], beta_parameters[3][1]))
+    P = P_DGtheta + P_MGCsigma + P_alpha + P_beta + P_gamma + np.log(P_C) + P_sigma + np.log(P_G)
 
-    return [P, P_DGtheta, P_MGCsigma, P_alpha, P_beta, P_gamma, P_C, P_sigma, P_G]
+    return [P, P_DGtheta, P_MGCsigma, P_alpha, P_beta, P_gamma, np.log(P_C), P_sigma, np.log(P_G)]
 
 
 def placePerfectCells(tree):
@@ -642,8 +647,7 @@ def placePerfectCells(tree):
                     tree.nodes[k].cells.append(i)
                     break
 
-def main(simulate, cnFile, treeFile, snvFile, snvTable, result, initAlpha = 0.0174, initBeta = 0.1256, initSigma = 0.001, treeNum = 1, imputedFP = -1, imputedFN = -1, imputedMiss = -1, errorSD = 0, searches=1000000):  
-
+def main(simulate, cnFile, treeFile, snvFile, snvTable, result, searches, initAlpha = 0.0174, initBeta = 0.1256, initSigma = 0.01, treeNum = 1, imputedFP = -1, imputedFN = -1, imputedMiss = -1, errorSD = 0):  
     D = []
     snvs = []
     nodes = []
@@ -779,7 +783,6 @@ def main(simulate, cnFile, treeFile, snvFile, snvTable, result, initAlpha = 0.01
         print(snvPlacement)
         
  
-
     P_G, P_G0, tree = init(D, theta, initSigma, tree, snvs, beta_parameters)
 
     ## iteration steps
@@ -800,15 +803,12 @@ def main(simulate, cnFile, treeFile, snvFile, snvTable, result, initAlpha = 0.01
         f_log.write(' '.join([str(a) for a in row]) + "\n")
     f_log.write("Starting probability is %s\n" % P)
     writeTree(f_log, tree)
-
     tree.p = 0
     topTrees = []
     for node in tree.nodes:
         if(node.parentID == -1):
             print("root node is " + str(node.id))
-
     while search <= searches:
-
         r = np.random.uniform(0, 1, 1)
         r = r[0]
         tree.id = copy.deepcopy(search)
@@ -1025,6 +1025,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args)
     if(args.simulated == 1):
-        main(args.simulated,  -1, args.treeFile, -1, args.snvs_table, args.out, args.alpha, args.beta, args.sigma, -1, args.imputedFP, args.imputedFN, args.imputedMiss, args.errorSD, args.searches)
+        main(args.simulated,  -1, args.treeFile, -1, args.snvs_table, args.out, args.searches, args.alpha, args.beta, args.sigma, -1, args.imputedFP, args.imputedFN, args.imputedMiss, args.errorSD)
     else:
-        main(args.simulated, args.cnFile, args.treeFile, args.snvs, args.snvs_table, args.out, args.alpha, args.beta,  args.sigma, args.treeNum, args.searches)
+        main(args.simulated, args.cnFile, args.treeFile, args.snvs, args.snvs_table, args.out, args.searches, args.alpha, args.beta,  args.sigma, args.treeNum)
