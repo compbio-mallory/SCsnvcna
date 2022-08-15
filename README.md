@@ -1,6 +1,6 @@
 Note: This repository contains scripts that were developed for "SCsnvcna: Integrating SNVs and CNAs on a phylogenetic tree from single-cell DNA sequencing data". 
 
-Authors: 
+Authors: Liting Zhang, Hank Bass, Jerome Irianto, and Xian Mallory. 
 
 # SCsnvcna
 SCsnvcna is an algorithm that integrate SNVs and CNAs on a phylogenetic tree from single-cell DNA sequencing data. SCsnvcna uses a loss-supported model that allow mutation lossess based on observed copy number loss on CNAs tree. 
@@ -16,7 +16,7 @@ SCsnvcna is implemented in Python.
 	- [Input](#input)
 	- [Output](#output)
 	- [Usage](#usage)
-
+3. [Simulation](#getsimulation)
 
 <a name="setup"></a>
 ## Setup
@@ -95,7 +95,7 @@ Scsnvcna produces several output files, as detailed below. In addition to these,
 SCsnvcna can be run from the command line as follows.
 
 ```
-python3 ./main.py -tree tree_8_p3.tsv -D input_t8_rep5.D.tsv -overlap input_t8_rep5.mutCNAoverlap.tsv -out prefix -alpha 0.01 -beta 0.2 -sigma 0.05 -searches 100000 -reveal input_t8_rep5.SNVcell.tsv -restart 10
+python3 code/main.py -tree data/sample_data/tree_8_p3.tsv -D data/sample_data/input.D.tsv -overlap data/sample_data/input.mutCNAoverlap.tsv -out data/sample_data/prefix -alpha 0.01 -beta 0.2 -sigma 0.05 -searches 100000 -reveal data/sample_data/input.SNVcell.tsv -restart 10
 ```
  - -tree Copy number tree structure file
  - -D observed genotype matrix for SNV cells
@@ -108,4 +108,20 @@ python3 ./main.py -tree tree_8_p3.tsv -D input_t8_rep5.D.tsv -overlap input_t8_r
  - -reveal file contains where should SNV cells be placed. Empty file if no SNV cells constrian. 
  - -restart number of restart. Default is 10.
  
-
+<a name="getsimulation"></a>
+## Get Simulation Data for SCsnvcna
+1. Generate a Tree
+```
+python3 code/simulation_code/gen_tree.py -F 8 -B 0.3 -o tree_8_p3.tsv
+```
+ - -F width of the tree. Number of leaves on this tree. Default is 16.
+ - -B Beta splitting variable. Default is 0.3.
+ - -o Output file. 
+2. Add mutations and cells to the tree.
+```
+python3 code/simulation_code/sim_par.py -c 50 -n 20 -f tree_8_p3.csv -P input
+```
+ - -c Number of cells. Default is 100.
+ - -n Number of mutation. Default is 100.
+ - -f Tree file from step 1.
+ - -P Output file prefix. 
