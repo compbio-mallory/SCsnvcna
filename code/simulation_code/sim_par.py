@@ -670,10 +670,10 @@ def mutation_matrix(mut_array, SNVcell_array, tree_f, n, m, lossMutP, missingP, 
         # modify G_ according to the loss of mutation in nonSCARLET case
         G_ = addLossMutSCARLET(G_, edge_dict, node_dict, SNVcell_array_, n,  m, G, mutEdgePair)
             
-    print_matrix(G, n, G_matrix_file + ".csv")
+    print_matrix(G, n, G_matrix_file + ".tsv")
 
     if forSCARLET:
-        print_matrix(G_, len(G_), G_matrix_file + ".SCARLET.csv")
+        print_matrix(G_, len(G_), G_matrix_file + ".SCARLET.tsv")
 
         total_zeros = count_total_value(G_, n_, m, 0)
         total_ones = count_total_value(G_, n_, m, 1)
@@ -681,14 +681,14 @@ def mutation_matrix(mut_array, SNVcell_array, tree_f, n, m, lossMutP, missingP, 
 
     # Step a. now make missing data to produce D 
     D_miss = add_missing(G, n, m, missingP) 
-    print_matrix(D_miss, n, D_miss_file + ".csv")
+    print_matrix(D_miss, n, D_miss_file + ".tsv")
     total_threes = count_total_value(D_miss, n, m, 3)
     #print("Total three for D_miss is " + str(total_threes))
 
     if forSCARLET:
         # copy the D_miss data for the first n rows, then call the add_missing for the rest of the rows
         D_miss_ = add_missing_SCARLET(D_miss, G_, n, m, missingP)
-        print_matrix(D_miss_, n_, D_miss_file + ".SCARLET.csv") 
+        print_matrix(D_miss_, n_, D_miss_file + ".SCARLET.tsv") 
         total_threes = count_total_value(D_miss_, n_, m, 3)
         print("Total three for D_miss_ is " + str(total_threes))
 
@@ -703,12 +703,12 @@ def mutation_matrix(mut_array, SNVcell_array, tree_f, n, m, lossMutP, missingP, 
     #print("total zeros after FPFN: " + str(total_zeros) + "; total ones after FPFN: " + str(total_ones))
 
     # store the D matrix
-    print_matrix(D_miss_FP_FN, n, D_matrix_file + ".csv")
+    print_matrix(D_miss_FP_FN, n, D_matrix_file + ".tsv")
 
     if forSCARLET:
         # copy the D_miss_FP_FN matrix for the first n rows, then call the add_FPFNs for the rest of the rows
         D_miss_FP_FN_ = add_FPFNs_SCARLET(D_miss_FP_FN, D_miss_, n, m, alpha, beta)
-        print_matrix(D_miss_FP_FN_, n_, D_matrix_file + ".SCARLET.csv")
+        print_matrix(D_miss_FP_FN_, n_, D_matrix_file + ".SCARLET.tsv")
         total_zeros = count_total_value(D_miss_FP_FN_, n_, m, 0)
         total_ones = count_total_value(D_miss_FP_FN_, n_, m, 1)
         print("After adding noises, total zeros for G_: " + str(total_zeros) + "; total ones for G_: " + str(total_ones))
@@ -767,21 +767,21 @@ tree_f = args.tree_file
 prefix = args.prefix
 forSCARLET = args.if_scarlet
 
-# First, distribute the mutations on the edges. Read tree_f output to prefix + ".mut.csv" 
-mut_array = distribute_mutations(mut_n, tree_f, prefix + ".mut.csv")
+# First, distribute the mutations on the edges. Read tree_f output to prefix + ".mut.tsv" 
+mut_array = distribute_mutations(mut_n, tree_f, prefix + ".mut.tsv")
 
-# Second, distribute the cells on the leaf nodes. Read tree_f output to prefix + ".SNVcell.csv" 
-SNVcell_array = distribute_SNVcells(cell_n, tree_f, sigma, prefix + ".SNVcell.csv")
+# Second, distribute the cells on the leaf nodes. Read tree_f output to prefix + ".SNVcell.tsv" 
+SNVcell_array = distribute_SNVcells(cell_n, tree_f, sigma, prefix + ".SNVcell.tsv")
 
 # for SCARLET input, we add one SNV cell to all internal nodes, and those leaves that do not have any nodes. 
 SNVcell_array_SCARLET = []
 total_leaves_SCARLET = 0
 if forSCARLET:
-    SNVcell_array_SCARLET, total_leaves_SCARLET = add_SNVcells_internal(tree_f, SNVcell_array, cell_n, prefix + ".SNVcell.SCARLET.csv")
+    SNVcell_array_SCARLET, total_leaves_SCARLET = add_SNVcells_internal(tree_f, SNVcell_array, cell_n, prefix + ".SNVcell.SCARLET.tsv")
 
 # Last, make mutation matrices G and D. 
-# .miss.csv, .G.csv and .D.csv for non-SCARLET input. .miss.SCARLET.csv, .G.SCARLET.csv and .D.SCARLET.csv for SCARLET input. No .reveal file for scarlet. The same .mutCNAoverlap.csv and .mutLoss.csv file for both non-SCARLET and SCARLET input. 
-mutation_matrix(mut_array, SNVcell_array, tree_f, cell_n, mut_n, loss, missing, alpha, beta, edge_reveal, prefix + ".mutLoss.csv", prefix + ".mutCNAoverlap.csv", prefix + ".G", prefix + ".D", prefix + ".reveal.csv", prefix + ".miss", forSCARLET, total_leaves_SCARLET, SNVcell_array_SCARLET)
+# .miss.tsv, .G.tsv and .D.tsv for non-SCARLET input. .miss.SCARLET.tsv, .G.SCARLET.tsv and .D.SCARLET.tsv for SCARLET input. No .reveal file for scarlet. The same .mutCNAoverlap.tsv and .mutLoss.tsv file for both non-SCARLET and SCARLET input. 
+mutation_matrix(mut_array, SNVcell_array, tree_f, cell_n, mut_n, loss, missing, alpha, beta, edge_reveal, prefix + ".mutLoss.tsv", prefix + ".mutCNAoverlap.tsv", prefix + ".G", prefix + ".D", prefix + ".reveal.tsv", prefix + ".miss", forSCARLET, total_leaves_SCARLET, SNVcell_array_SCARLET)
 
 
 
