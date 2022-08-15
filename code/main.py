@@ -12,7 +12,7 @@ import time
 
 
 
-def simulate_main(treeFile, snvTable, overlapped, reveal, result, searches, initAlpha = 0.001, initBeta = 0.2, initSigma = 0.05, restart = 10, ifFixed = 1):
+def simulate_main(treeFile, snvTable, overlapped, reveal, result, searches, initAlpha = 0.001, initBeta = 0.2, initSigma = 0.05, restart = 10, ifFixed = 0, burnin = 2000):
 
   imputedFP =initAlpha
   imputedFN = initBeta
@@ -31,6 +31,24 @@ def simulate_main(treeFile, snvTable, overlapped, reveal, result, searches, init
   f_cell = open(result + ".cell", "w")
   topTree = None
   initTree, imputedMiss = readNewSimulatedTree(treeFile, snvTable, overlapped, reveal, initAlpha, initBeta, initSigma)
+  # total = 0
+  # one = 0
+  # four = 0
+  # six = 0
+  # for c in initTree.cells_pos:
+  #   if len(c) > 0:
+  #     total += 1
+  #     if len(c) == 1:
+  #       one += 1
+  #       four += 1
+  #       six += 1
+  #     elif len(c) <= 4:
+  #       four += 1
+  #       six += 1
+  #     elif len(c) <= 6:
+  #       six += 1
+
+  # print(total, one, four, six)
 
   for i in range(restart):
     tree = deepcopy(initTree)
@@ -43,7 +61,7 @@ def simulate_main(treeFile, snvTable, overlapped, reveal, result, searches, init
 
     print("restart:", i)
     start_time = time.time()
-    trees = MCMC(searches, tree, m_h, pi, p_lamda, ifFixed)
+    trees = MCMC(searches, tree, m_h, pi, p_lamda, ifFixed, burnin)
     print("--- %s seconds ---" % (time.time() - start_time))
     if not topTree:
       topTree = deepcopy(trees[0])
@@ -89,13 +107,14 @@ if __name__ == "__main__":
   parser.add_argument('-out', help = "Required: Output file", type = str)
   parser.add_argument('-alpha', help = "False positive value", type = float, default= 0.0174)
   parser.add_argument('-beta', help = "False negative value", type = float, default = 0.1256)
-  parser.add_argument('-sigma', help = "Standar deviation for snv proportion and cn proportion", type = float, default = 0.001)
+  parser.add_argument('-sigma', help = "Standar deviation for snv proportion and cn proportion", type = float, default = 0.05)
   parser.add_argument("-searches", help="Number of searches", type=int, default=100000)
   parser.add_argument("-reveal", help = "Reveal file: where SNV should be placed", type  = str)
-  parser.add_argument("-restart", type = int)
-  parser.add_argument("-fixCell", help="Whether the cell placement is fixed", type = int, default = 1)
+  parser.add_argument("-restart", type = int, default=10)
+  parser.add_argument("-fixCell", help="Whether the cell placement is fixed", type = int, default = 0)
+  parser.add_argument("-burnin", help = "Burn it", default=2000, type=int)
   args = parser.parse_args()
 
     #start_time = time.time()
-  simulate_main(args.tree, args.D, args.overlap, args.reveal, args.out, args.searches, args.alpha, args.beta, args.sigma,  args.restart, args.fixCell)
+  simulate_main(args.tree, args.D, args.overlap, args.reveal, args.out, args.searches, args.alpha, args.beta, args.sigma,  args.restart, args.fixCell, args.burnin)
     #print("--- %s seconds ---" % (time.time() - start_time))

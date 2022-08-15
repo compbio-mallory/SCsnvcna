@@ -4,7 +4,7 @@ from copy import deepcopy
 import math
 from write_tree import *
 from TREE import *
-
+import os.path
 
 
 # this function read the eddgelist
@@ -72,14 +72,15 @@ def readNewSimulatedTree(treeFile, snvTableFile, overlapped, revealFile, initAlp
     snvs.append(snv)
 
   # get overlapping SNV and CNA
-  f = open(overlapped)
-  lines = f.readlines()
-  for line in lines:
-    temp = line.split()
-    node = int(temp[0])
-    snv = int(temp[1])
-    snvs[snv].loss_node.append(node)
-  f.close()
+  if os.path.exists(overlapped):
+    f = open(overlapped)
+    lines = f.readlines()
+    for line in lines:
+      temp = line.split()
+      node = int(temp[0])
+      snv = int(temp[1])
+      snvs[snv].loss_node.append(node)
+    f.close()
 
   tree.snvs = deepcopy(snvs)
   # for d in D:
@@ -87,36 +88,42 @@ def readNewSimulatedTree(treeFile, snvTableFile, overlapped, revealFile, initAlp
   tree.cells = [-1] * len(tree.D)
   tree.cells_pos = [[] for _ in range(len(tree.D))]
   #read the reveal of cell placement
-  f = open(revealFile, "r")
-  lines = f.readlines()
-  #print(lines)
-  for line in lines:
-    #print(line)
-    temp = line.split()
-    if len(temp) < 2:
-      continue
-    node = int(temp[0])
-    if tree.nodes[node].if_leaf:
-      # if leaf
-      cells = temp[1].split(";")
-      if temp[1] != "NA":
+  if os.path.exists(revealFile):
+    f = open(revealFile, "r")
+    lines = f.readlines()
+    #print(lines)
+    for line in lines:
+      #print(line)
+      temp = line.split()
+      if len(temp) < 2:
+        continue
+      node = int(temp[0])
+      if tree.nodes[node].if_leaf:
+        # if leaf
+        cells = temp[1].split(";")
+        if temp[1] != "NA":
+          for c in cells:
+            c = int(c)
+            if node not in tree.cells_pos[c]:
+              tree.cells_pos[c].append(node) # if multiple leaves
+            else:
+              # if previous internal edge contain this leaf
+              # set to this leaf
+              tree.cells_pos[c] = [node] 
+      else:
+        leaves = []
+        getLeaves(tree, node, leaves)
+        cells = temp[1].split(";")
         for c in cells:
           c = int(c)
-          tree.cells_pos[c].append(node)
-    else:
-      leaves = []
-      getLeaves(tree, node, leaves)
-      cells = temp[1].split(";")
-      for c in cells:
-        c = int(c)
-        # if not set
-        if len(tree.cells_pos[c]) == 0:
-          tree.cells_pos[c] = leaves
-        # if read a new node with few leaves for this cell
-        elif len(tree.cells_pos[c]) > len(leaves):
-          tree.cells_pos[c].clear()
-          tree.cells_pos[c] = leaves
-  f.close()
+          # if not set
+          if len(tree.cells_pos[c]) == 0:
+            tree.cells_pos[c] = deepcopy(leaves)
+          # if read a new node with few leaves for this cell
+          elif len(tree.cells_pos[c]) > len(leaves) and len(leaves) > 0:
+            tree.cells_pos[c].clear()
+            tree.cells_pos[c] = deepcopy(leaves)
+    f.close()
 
   cellPosAll = []
   for i in range(len(tree.cells_pos)):

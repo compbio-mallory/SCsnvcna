@@ -93,6 +93,7 @@ def search_SNV(tree, m_h, P_DG, old_P_DMK_list, old_P_CM_list, ifFixed):
       
   # handle snv loss due to copy number loss
   new_V_hat[s] = new_nodes[edge_new].perc
+  #ifLoss = False
   if len(new_snvs[s].loss_node) > 0:
     subtree = []
     getSubtree(tree.nodes, tree.nodes[edge_new], subtree)
@@ -101,11 +102,12 @@ def search_SNV(tree, m_h, P_DG, old_P_DMK_list, old_P_CM_list, ifFixed):
       if loss_n in subtree:
         loss_nodes.append(loss_n)
     loss_node = -1
-    if len(loss_nodes) > 1: # randomly loss on one edge
+    if len(loss_nodes) >= 1: # randomly loss on one edge
       loss_node = random.sample(loss_nodes, 1)[0]
     if loss_node in subtree:
       loss = np.random.uniform(0, 1, 1)
       if loss >= 0.5:
+        #ifLoss = True
         #print("mutation loss", snv.id, loss_node, new_nodes[edge_new].perc, new_nodes[loss_node].perc)
         new_V_hat[s] = new_nodes[edge_new].perc - new_nodes[loss_node].perc
         removeSNV(new_nodes, new_nodes[loss_node], snv.id)
@@ -196,7 +198,7 @@ def search_SNV(tree, m_h, P_DG, old_P_DMK_list, old_P_CM_list, ifFixed):
 # m_h: probability of m_h movement
 # pi: error rate movement
 # p_lamda: sigma movement
-def MCMC(iter, tree, m_h, pi, p_lamda, ifFixed):
+def MCMC(iter, tree, m_h, pi, p_lamda, ifFixed, burnin):
   tree, P_DMK_list, P_CM_list, P_DG = initTree(tree)
   print(tree.cellPosAll)
   curr_place = []
@@ -225,7 +227,7 @@ def MCMC(iter, tree, m_h, pi, p_lamda, ifFixed):
       accepted = search_sigma(tree, m_h, P_DG, P_DMK_list, P_CM_list)
     else:
       accepted, P_DG, P_DMK_list, P_CM_list = search_SNV(tree, m_h, P_DG, P_DMK_list, P_CM_list, ifFixed)
-    if accepted and i >= 2000:
+    if accepted and i >= burnin:
       tree.id = i
       #f_prob.write(str(i) + "\t" + str(round(tree.p[0], 3)) + "\n")
       if len(topTreeList) == 1 and topTreeList[0].id == 0:

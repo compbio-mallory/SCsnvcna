@@ -5,6 +5,7 @@
 Contacting email: fan@cs.fsu.edu
 """
 
+from ast import Continue
 import sys
 import argparse
 import numpy as np
@@ -568,15 +569,17 @@ def add_FPFNs(D, n, m, alpha, beta, total_zeros, total_ones):
     
 
 
-def reveal_edge_to_SNVcells(SNVcell_array, e_dict, n_dict, edge_revealP, edge_reveal_file):
+def reveal_edge_to_SNVcells(SNVcell_array, e_dict, n_dict, edge_revealP, edge_reveal_file, n):
     edge_reveal_f = open(edge_reveal_file, "w")
     # the edges selected
     edge_array = sorted(list(e_dict.keys()))
     # total edges to be revealed
     revealN = int(edge_revealP * len(edge_array))
-    edges = random.sample(range(len(edge_array)), revealN)
-    for i in range(len(edges)):
-        edge = str(edges[i])
+    count = 0
+    revealCells = []
+    while count < revealN:
+        edges = random.sample(range(len(edge_array)), 1)
+        edge = str(edges[0])
         # find all cells below this edge separated by semicolon
         leaves = leaves_under_edge(edge, e_dict, n_dict)
         # find all the cell IDs on these leaves
@@ -587,7 +590,12 @@ def reveal_edge_to_SNVcells(SNVcell_array, e_dict, n_dict, edge_revealP, edge_re
                     # all those cell IDs on this row of SNVcell_array shall be recorded
                     for k in SNVcell_array[j][1].split(";"):
                         cellsIDs.append(k)
-        print("\t".join([edge, ";".join(cellsIDs)]), file=edge_reveal_f)
+        if len(cellsIDs) == 0 or len(cellsIDs) > int(0.5 * n) or cellsIDs in revealCells:
+            continue
+        else:
+            print("\t".join([edge, ";".join(cellsIDs)]), file=edge_reveal_f)
+            count += 1
+            revealCells.append(cellsIDs)
     edge_reveal_f.close()
 
 
@@ -709,7 +717,7 @@ def mutation_matrix(mut_array, SNVcell_array, tree_f, n, m, lossMutP, missingP, 
         print("Success in generating D and G matrix for SCARLET. ")
     
     # Lastly, reveal the edges to some SNV cells. 
-    reveal_edge_to_SNVcells(SNVcell_array, edge_dict, node_dict, edge_revealP, edge_reveal_file)
+    reveal_edge_to_SNVcells(SNVcell_array, edge_dict, node_dict, edge_revealP, edge_reveal_file, n)
 
 
    
