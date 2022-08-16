@@ -107,7 +107,16 @@ python3 code/main.py -tree data/sample_data/tree_8_p3.tsv -D data/sample_data/in
  - -searches number of iteration. Default is 100000. 
  - -reveal file contains where should SNV cells be placed. Empty file if no SNV cells constrian. 
  - -restart number of restart. Default is 10.
- 
+
+To visualize the placement of SNVs and SNV cells
+```
+Rscript code/plot_tree.R prefix.treeText prefix
+```
+ - prefix.treeText are the newick output of SCsnvcna.
+ - prefix output plot prefix
+
+To tune the plot, change the parameter at then end of the `plot_tree.R` accordingly.  
+
 <a name="getsimulation"></a>
 ## Get Simulation Data for SCsnvcna
 1. Generate a Tree

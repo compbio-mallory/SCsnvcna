@@ -56,7 +56,7 @@ def genTreeText(tree):
   return(rootNHX)
 
 def genTreeTextChild(node, nodes):
-  snvs = 'S='
+  snvs = '+'
   for snv in node.new_snvs:
     snvs = snvs + str(snv) + "|"
   snvsLoss = "-"
@@ -75,10 +75,12 @@ def genTreeTextChild(node, nodes):
   if node.edge_length == 0:
     e_len = 0
   currText =  currText  + str(e_len) + "[&&NHX:"
-  if(len(snvs) > 2):
-    currText = currText + snvs
-  if(len(snvsLoss) > 1):
-    currText = currText + ":L=" + snvsLoss
+  if(len(snvs) > 1 or len(snvsLoss) > 1):
+    currText = currText + ":S="
+    if(len(snvs) > 1):
+      currText = currText + snvs
+    if(len(snvsLoss) > 1):
+      currText = currText  + snvsLoss
 
   cna = "|"
   counter = 0  
@@ -114,7 +116,7 @@ def genTreeTextChild(node, nodes):
           loss_.append([counter, i+1, s, end])
       counter += 1
 
-  currText = currText + ":M=" + cna #+ ":G=" + str(gain) + ":L=" + str(loss)
+  currText = currText #+ ":M=" + cna #+ ":G=" + str(gain) + ":L=" + str(loss)
   #currText = currText +  ":N=" + str(node.name) + "]"
   
   # node_label = str(node.id)
@@ -163,4 +165,5 @@ def getError(D, G):
     if num1 != 0:
       FN = fn / num1
     return FP, FN
+
 
