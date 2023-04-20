@@ -60,17 +60,39 @@ def readD(Dfile):
 
 
 
-def readNewSimulatedTree(treeFile, snvTableFile, overlapped, revealFile, initAlpha, initBeta, initSigma):
+def readNewSimulatedTree(treeFile, DFile, overlapped, revealFile, initAlpha, initBeta, initSigma, SNVFile = None, SNVcell =None):
   tree = readTreeStructure(treeFile)
   # read D
-  D = readD(snvTableFile)
-
+  D = readD(DFile)
   tree.D = deepcopy(D)
+  SNVnames = [] # list of SNV name
+  if SNVFile:
+    if os.path.exists(SNVFile):
+      f = open(SNVFile)
+      lines = f.readlines()
+      for line in lines:
+        temp = line.rstrip().split()
+        name = temp[1].split("_")[0]
+        SNVnames.append(name)
+      f.close()
   snvs = []
   for m in range(len(tree.D[0])):
-    snv = MySNV1(id = m)
-    snvs.append(snv)
-
+    if len(SNVnames) > 0:
+      snv = MySNV1(id = m, name = SNVnames[m])
+      snvs.append(snv)
+    else:
+      snv = MySNV1(id = m)
+      snvs.append(snv)
+  # get SNV cell names
+  SNVcellNames = []
+  if SNVcell:
+    if os.path.exists(SNVcell):
+      f = open(SNVcell)
+      lines = f.readlines()
+      for line in lines:
+        temp = line.rstrip().split()[1]
+        SNVcellNames.append(temp)
+      f.close()
   # get overlapping SNV and CNA
   if os.path.exists(overlapped):
     f = open(overlapped)
@@ -83,6 +105,7 @@ def readNewSimulatedTree(treeFile, snvTableFile, overlapped, revealFile, initAlp
     f.close()
 
   tree.snvs = deepcopy(snvs)
+  tree.cellNames = SNVcellNames
   # for d in D:
   #   print(d)
   tree.cells = [-1] * len(tree.D)
@@ -150,5 +173,5 @@ def readNewSimulatedTree(treeFile, snvTableFile, overlapped, revealFile, initAlp
     [2, math.ceil(2*(1 - initBeta) / initBeta)], #beta
     [2, math.ceil(2*(1 - initGamma) / initGamma)], #gamma, mean of initial gamma
     [2, math.ceil(2*(1 - initSigma) / initSigma)]] #sigma, mean of signma
-  return tree, initGamma, 
+  return tree, initGamma
 

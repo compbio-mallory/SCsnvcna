@@ -5,7 +5,7 @@ import numpy as np
 from scipy import stats
 import copy
 from write_tree import *
-from data_structure import *
+
 from TREE import *
 import random
 
@@ -240,4 +240,23 @@ def MCMC(iter, tree, m_h, pi, p_lamda, ifFixed, burnin):
         topTreeList.append(deepcopy(tree))
 
     i += 1
-  return topTreeList
+  # return dict of inferred tree
+  res = {}
+  res["G"] = topTreeList[0].G
+  res['cells'] = topTreeList[0].cells
+  SNVs = {}
+  SNVs_loss = {}
+  for s in topTreeList[0].snvs:
+    SNVs[s.id] = s.edge
+    SNVs_loss[s.id] = s.loss
+  res['snv'] = SNVs
+  res['snv_loss'] = SNVs_loss
+  res['p'] = topTreeList[0].p
+  res['theta'] = topTreeList[0].theta
+  res['id'] = topTreeList[0].id
+  res['sigma'] = topTreeList[0].sigma
+  res['treeText'] = genTreeText(topTreeList[0])
+  #return topTreeList
+  #print("returning")
+  #print(res)
+  return res

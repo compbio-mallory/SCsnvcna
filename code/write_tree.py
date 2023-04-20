@@ -4,7 +4,7 @@ from numpy import roots
 from numpy.core.fromnumeric import sort
 from numpy.lib.function_base import append
 from numpy.lib.shape_base import split
-from data_structure import MySNV1, MyNode1
+from TREE import *
 from random import sample
 
 import numpy as np
@@ -12,12 +12,12 @@ import numpy as np
 # function to write out tree information
 def writeTree(f, tree):
 
-    G = tree.G
+    G = tree['G']
     for row in G:
         f.write(' '.join([str(a) for a in row]) + "\n")
     f.write("SNV placement\n")
-    for j in tree.snvs:
-      f.write(str(j.id) + "," + str(j.edge) + "," + str(j.loss) + "\t")
+    for j in tree['snv']:
+      f.write(str(j) + "," + str(tree['snv'][j]) + "," + str(tree['snv_loss'][j]) + "\t")
     f.write("\n")
     
 
@@ -34,46 +34,59 @@ def genTreeText(tree):
         root = node.id
         break
   rootName = nodes[root].name
-  snvs = ''
+  snvs = '+'
   for snv in nodes[root].new_snvs:
-    snvs = snvs + str(snv) + "|"
+    s = snv
+    if tree.snvs[snv].name != -1:
+      s = tree.snvs[snv].name
+    snvs = snvs + str(s) + "|"
   rootNHX = ''
   if len(snvs) > 1:
-    rootNHX = "):" + str(round(nodes[root].edge_length, 2)) +"[&&NHX:S=" + snvs + ":N=" + str(rootName) + "];"
+    rootNHX = "):" + str(round(nodes[root].edge_length + 1, 2)) +"[&&NHX:S=" + snvs + ":N=" + str(rootName) + "];"
   else:
-    rootNHX = "):" + str(round(nodes[root].edge_length, 2)) + "[&&NHX:" + ":N=" + str(rootName) + "];"
+    rootNHX = "):" + str(round(nodes[root].edge_length + 1, 2)) + "[&&NHX:" + ":N=" + str(rootName) + "];"
   numChild = len(nodes[root].children)
+  print(tree.cellNames)
   for c in nodes[root].children:
     #print(root)
     #print(c)
     child = nodes[c]
     #print(isinstance(nodes[c].name, int))
-    rootNHX = genTreeTextChild(child, nodes) + rootNHX
+    rootNHX = genTreeTextChild(tree, tree.cellNames, child, nodes) + rootNHX
     numChild -= 1
     if(numChild > 0):
       rootNHX = "," + rootNHX
   rootNHX = "(" + rootNHX +"\n"
   return(rootNHX)
 
-def genTreeTextChild(node, nodes):
+def genTreeTextChild(tree, cellnames, node, nodes):
   snvs = '+'
   for snv in node.new_snvs:
-    snvs = snvs + str(snv) + "|"
+    s = snv
+    if tree.snvs[snv].name != -1:
+      s = tree.snvs[snv].name
+    snvs = snvs + str(s) + "|"
   snvsLoss = "-"
   if node.loss_snvs:
     #print("mutation loss")
     for snv in node.loss_snvs:
-      snvsLoss = snvsLoss + str(snv) + "|"
+      s = snv
+      if tree.snvs[snv].name != -1:
+        s = tree.snvs[snv].name
+      snvsLoss = snvsLoss + str(s) + "|"
   cells = ''
   for cell in node.cells:
-    cells = cells + str(cell) + "|"
+    c = cell
+    if len(cellnames) > 0:
+      c = cellnames[cell]
+    cells = cells + str(c) + "|"
   currText = ''
   if(node.if_leaf):
     currText = cells + ":"
-  e_len = round(node.edge_length + 0.1, ndigits= 2)
+  e_len = round(node.edge_length + 1, ndigits= 2)
 
-  if node.edge_length == 0:
-    e_len = 0
+  #if node.edge_length == 0:
+  #  e_len = 0
   currText =  currText  + str(e_len) + "[&&NHX:"
   if(len(snvs) > 1 or len(snvsLoss) > 1):
     currText = currText + ":S="
@@ -128,7 +141,7 @@ def genTreeTextChild(node, nodes):
     for c in node.children:
       #print("get node ", c)
       child = nodes[c]
-      text = genTreeTextChild(child, nodes)
+      text = genTreeTextChild(tree, cellnames,child, nodes)
       currText = text + currText
       numChild -= 1
       if(numChild > 0):

@@ -6,8 +6,42 @@ from scipy import stats
 import copy
 from numpy.random import beta, gamma, sample
 from write_tree import *
-from data_structure import *
+
 import time
+
+
+# SNV 
+# definition of one SNV
+class MySNV1():
+  def __init__(self, id, name = -1, ale = -1, chr = -1, pos = -1):
+    #MySNV.__init__(self, ale, chr, pos, ori_nuc, new_nuc)
+    self.id = id
+    self.name = name
+    self.ale = ale
+    self.chr = chr
+    self.edge = -1 #where it is placed on 
+    self.overlapped = []
+    self.loss_node = [] #where this SNV will be lost
+    self.loss = -1
+    self.pos = pos
+
+# tree is an array of MyNode
+class MyNode1:
+  def __init__(self, id = -1, name = None, parent=None, parentID = -1, perc = None, if_leaf = False):
+    self.id = id
+    self.name = name
+    self.parent = parent
+    self.children = []# ids for children
+    self.edge_length = 1
+    self.snvs = []#snv ids 
+    self.cn_summary = [{}] * 24 #for each chromosome, cn_summary[i] = {"s:e": cn, ...}, 
+    self.parentID = parentID
+    self.perc = perc#percentage of ícells below this node
+    self.if_leaf = if_leaf
+    self.cells = []
+    self.new_snvs = [] # new snvs happen on this node, snv ids
+    self.loss_snvs = None
+
 
 
 class TREE():
@@ -23,6 +57,7 @@ class TREE():
     self.sigma = 0
     self.snvs = [] # list of MYSNV object
     self.cells = [] #where cells are placed
+    self.cellNames = [] # SNV cell names
     self.leavesID = [] #list of leave id
     self.beta_parameters = []
     self.cells_pos = None # which nodes should the cell be placed, restricted by the CNA 
@@ -34,7 +69,7 @@ class TREE():
 def sortNodesKey(node):
   return node.id
 
-#function to calculate the V_bar
+#function to calculate the V_bar， CP for SNVs
 def getV_bar(G):
   n = len(G)
   m = len(G[0])
@@ -301,13 +336,13 @@ def placeCells(self):
           best_leaf.clear()
           best_leaf.append(leafID)
           best_leaf_prod = prod
-        elif abs(prod - best_leaf_prod) < 0.000001:
+        elif abs(prod - best_leaf_prod) < 10**(-10):
           best_leaf.append(leafID)
           
     else:
       for leafID in self.leavesID: #for each leaf
-        if leafID in self.cellPosAll:
-          continue
+        #if leafID in self.cellPosAll:
+        #  continue
         prod = 0
         for j in range(len(D[0])): #for each mutation
           p_cym = getP_CM(self.nodes[leafID], snvs[j], theta, D[i][j])
@@ -316,7 +351,7 @@ def placeCells(self):
           best_leaf.clear()
           best_leaf.append(leafID)
           best_leaf_prod = prod
-        elif abs(prod - best_leaf_prod) < 0.000001:
+        elif abs(prod - best_leaf_prod) < 10**(-10):
           best_leaf.append(leafID)
 
     selected = -1
@@ -372,12 +407,12 @@ def updateCellsPlacement(nodes, cells_pos, cellPosAll, snvs, leavesID, D, cells,
           best_leaf.clear()
           best_leaf.append(leafID)
           best_leaf_prod = prod
-        elif abs(prod - best_leaf_prod) < 0.000001:
+        elif abs(prod - best_leaf_prod) < 10**(-10):
           best_leaf.append(leafID)
     else:
       for leafID in leavesID: #for each leaf
-        if leafID in cellPosAll: # if a cell is not restricted by CNA, then it will not be placed in those leaves
-          continue
+        #if leafID in cellPosAll: # if a cell is not restricted by CNA, then it will not be placed in those leaves
+        #  continue
         prod = 0
         for j in range(len(D[0])): #for each mutation
           p_cym = getP_CM(nodes[leafID], snvs[j], theta, D[i][j])
@@ -386,7 +421,7 @@ def updateCellsPlacement(nodes, cells_pos, cellPosAll, snvs, leavesID, D, cells,
           best_leaf.clear()
           best_leaf.append(leafID)
           best_leaf_prod = prod
-        elif abs(prod - best_leaf_prod) < 0.000001:
+        elif abs(prod - best_leaf_prod) < 10**(-10):
           best_leaf.append(leafID)
     selected = -1
     maxSimilar = -1
@@ -718,3 +753,4 @@ def pathToRoot(tree, node):
     path.append(tree.nodes[curr_node].parentID)
     curr_node =tree.nodes[curr_node].parentID
   return path
+

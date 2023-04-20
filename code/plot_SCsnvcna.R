@@ -1,15 +1,6 @@
-#!/usr/bin/env Rscript
-args = commandArgs(trailingOnly=TRUE)
-
-# test if there is at least one argument: if not, return an error
-if (length(args)==0) {
-  stop("Usage plot_tree.R input output.n", call.=FALSE)
-} 
-
 library(ggtree)
 library(ape)
 library(tidyverse)
-# source https://rdrr.io/bioc/treeio/src/R/nhx.R
 get_nhx_feature <- function(nhx_features) {
   nameSET <- strsplit(nhx_features, split=":") %>% unlist %>%
     gsub("=.*", "", .) %>% unique
@@ -95,14 +86,13 @@ new("treedata",
 )
 }
 
+args <- commandArgs(trailingOnly = TRUE)
+out  <- strsplit(args[1], "\\.")[[1]][1]
+print(paste("plotting",out))
+text <- paste(readLines(args[1]), collapse = "\n")
+tree <- read.nhx(textConnection(text))
+ggtree(tree) + geom_tiplab(geom = "label", size = 3, hjust = 0) + 
+  geom_label(aes(x=branch, label=S), hjust = 0.8, vjust = 1,  size =3) + 
+  geom_label(aes(label=N), size = 3) 
+ggsave(paste(out,".pdf",sep=""), width = 49, height = 28, dpi = 320)
 
-lines = readLines(args[1])
-treetext = lines[1]
-tree <- read.nhx(textConnection(treetext))
-
-P <- ggtree(tree) + geom_tiplab(geom = "label", size = 6, hjust = -0.2, fill = 'pink') + 
-  geom_label(aes(x=branch, label=S), hjust = 0.55, vjust = 1, fill='lightgreen', size = 5) + 
-  geom_label(aes(label=N), fill='lightblue', size = 6) 
-outfile = args[2]
-outfile = paste(outfile, "pdf", sep = ".")
-ggsave(outfile, width = 49, height = 28, dpi = 320)
