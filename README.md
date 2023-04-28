@@ -10,7 +10,6 @@ SCsnvcna is implemented in Python.
 
 ## Contents
 1. [Setup](#setup) 
-	- [Dependencies](#dependencies)
 
 2. [Running SCsnvcna](#runningscsnvcna)
 	- [Input](#input)
@@ -20,13 +19,6 @@ SCsnvcna is implemented in Python.
 
 <a name="setup"></a>
 ## Setup
-
-
-<a name="dependencies"></a>
-### Dependencies
-
-- Python 3.9 ([anaconda distribution](https://www.anaconda.com/distribution/) recommended)  
-
 
 ### SCsnvcna Setup
 To use SCsnvcna, first clone the SCsnvcna repository locally. 
@@ -39,16 +31,16 @@ SCsnvcna uses Python and doesn't require any compilation.
 <a name="runningscsnvcna"></a>
 ## Running SCsnvcna
 <a name="input"></a>
-### Input Files
+### Required Input Files
 SCsnvcna takes as input three files. The first describe the copy number tree structure from CNAs cell. The second descibes the observed genotype matrix from SNV cells. The third describes the set of supported losses for each edge in the copy number tree. 
 
-1. **Tree structure file**. This file describe the copy-number tree structure constructured from CNAs cells. This file takes the format of a tab-separated edge list, where the first two columns are child and parent nodes, followed by  edge ID connecting into child node (same as child node), edge length, percentage of CNAs cells below this node, whether it is a leaf, and an optional node name. 
+1. **Tree structure file**. This file describe the copy-number tree structure constructured from CNAs cells. This file takes the format of a tab-separated edge list, where the first two columns are child and parent nodes, followed by  edge ID connecting into child node (same as child node), edge length, percentage of CNAs cells below this node, whether it is a leaf, and an optional node name. If node names are given, node names will be used to generate the output newick file instead of node ids. 
 ```
- 0	-1	0	0.001	1	0
- 1	0	1	0.002	0.6	0
- 2	0	2	0.04	0.4	1
- 3	1	3	0.05	0.3	1
- 4	1	4	0.4	0.3	1
+ 0	-1	0	0.001	1	0	[in0]
+ 1	0	1	0.002	0.6	0	[in1]
+ 2	0	2	0.04	0.4	1	[cell0]
+ 3	1	3	0.05	0.3	1	[cell1]
+ 4	1	4	0.4	0.3	1	[cell2]
 ```
 2. **Genotyp matrix file**. This file describe the observed genotype matrix from SNVs cells. This file takes the format of a tab-seperated matrix. Where each line is the genotype for each cell, whereas each columns are genotype for each SNVs. 0 is absent, 1 is present, and 3 is missing.
  ```
@@ -56,13 +48,36 @@ SCsnvcna takes as input three files. The first describe the copy number tree str
  1	1	1	0	...
  ...
  ```
-3. **Mutation loss support file**. This file describe the potential mutation loss of each edge. The first column is edge, the second column is the SNV that might be lost on this edge. 
+
+### Optional Input Files 
+1. **Mutation loss support file**. This file describes the potential mutation loss of each edge id. The first column is edge, the second column is the SNV that might be lost on this edge. 
  ```
- 1 19
- 12 55
+ 1	19
+ 12	55
  ...
- ```	
+ ```
  
+ 2. **Reveal file**. This file describes which CNA nodes should a SNV cell be constrained to. The first column is edge id, the second columns is the SNV cell id. 
+ ```
+ 24	10
+ 26	10
+ 30	11
+ ...
+ ```
+ 
+3. **SNV cell names file**. This file includes the SNV cell ID and its corresponding SNV cell name separated by tab. If this such a file is provided, SNV cells names will be used when generating newick file instead of ids. 
+```
+0	MA27
+1	MA28
+...
+```
+4. **SNV  names file**. This file includes the SNV ID and its corresponding SNV name separated by tab. If this such a file is provided, SNV names will be used when generating newick file instead of ids. 
+```
+0	TP53
+1	NRAS
+...
+```
+
 Examples of these files can be found in the `data/simulation/` directory.
 
 <a name="output"></a>
@@ -95,27 +110,30 @@ Scsnvcna produces several output files, as detailed below. In addition to these,
 SCsnvcna can be run from the command line as follows.
 
 ```
-python3 code/main.py -tree data/sample_data/tree_8_p3.tsv -D data/sample_data/input.D.tsv -overlap data/sample_data/input.mutCNAoverlap.tsv -out data/sample_data/prefix -alpha 0.01 -beta 0.2 -sigma 0.05 -searches 100000 -reveal data/sample_data/input.SNVcell.tsv -restart 10
+python3 code/main.py -tree data/sample_data/tree_8_p3.tsv -D data/sample_data/input.D.tsv -overlap data/sample_data/input.mutCNAoverlap.tsv -out data/sample_data/prefix -alpha 0.01 -beta 0.2 -sigma 0.05 -itr 100000 -reveal data/sample_data/input.SNVcell.tsv -restart 5
 ```
- - -tree Copy number tree structure file
- - -D observed genotype matrix for SNV cells
- - -overlap files contain potential mutation loss. Empty file if no mutation loss. 
- - -out output prefix 
- - -alpha initial false positve rate
- - -beta initial false negative rate
- - -sigma standard deviation of CPs between CNA cells and SNV cells
- - -searches number of iteration. Default is 100000. 
- - -reveal file contains where should SNV cells be placed. Empty file if no SNV cells constrian. 
- - -restart number of restart. Default is 10.
+ - -tree Copy number tree structure file. Required.
+ - -D observed genotype matrix for SNV cells. Required. 
+ - -out output prefix. Required. 
+ - -overlap files contain potential mutation loss. Optional.
+ - -alpha initial false positve rate. Default is 0.01. Optional
+ - -beta initial false negative rate. Default is 0.2. Optional
+ - -sigma standard deviation of CPs between CNA cells and SNV cells. Default is 0.05. Optional.
+ - -itr number of iteration. Default is 100000. Optional.
+ - -reveal file contains where should SNV cells be constrained to. Optional.
+ - -restart number of restart. Default is 5. Optional.
+ - -burnin number of iterations to burn in. Default is 2000. Optional.
+ - -SNVcell file contains the SNV cells IDs and its corresponding names. Optional.
+ - -SNVID files contains the SNV IDs and its corresponding names. Optional.
 
-To visualize the placement of SNVs and SNV cells
+#### To visualize the placement of SNVs and SNV cells
 ```
-Rscript code/plot_tree.R prefix.treeText prefix
+Rscript code/plot_SCsnvcna.R prefix.newick prefix.jpeg
 ```
  - prefix.treeText are the newick output of SCsnvcna.
- - prefix output plot prefix
+ - prefix.jpeg output file name for the plot
 
-To tune the plot, change the parameter at then end of the `plot_tree.R` accordingly.  
+To tune the plot, change the parameter at the end of the `plot_tree.R` accordingly.  
 
 <a name="getsimulation"></a>
 ## Get Simulation Data for SCsnvcna
