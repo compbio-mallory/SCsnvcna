@@ -7,14 +7,11 @@ warnings.filterwarnings("ignore")
 import umap
 import hdbscan 
 from collections import Counter
+import argparse
 
-SNVcell = sys.argv[1]# snv cell list with id
-CNAcell = sys.argv[2] # input CNA tree with id and names for CNA cells
-SNVCN = sys.argv[3]
-CNACN = sys.argv[4]
 
 # get bins that overlap CNAs cells and SNVs cells
-def getBins(SNVdf, CNAdf):
+def getBins(SNVdf, CNAdf, percBin):
     # get segments that overlaps for 90%
   overlap_dict = {}
   for index_S, row_S in SNVdf.iterrows():
@@ -38,7 +35,7 @@ def getBins(SNVdf, CNAdf):
       # Calculate the length of the segment in C
       segment_length_C = END_C - START_C
       # Check if the overlap is more than 80% of the segment in A and B
-      if overlap_length >= 0.9 * segment_length_S and overlap_length >= 0.9 * segment_length_C:
+      if overlap_length >= percBin * segment_length_S and overlap_length >= percBin * segment_length_C:
         overlap_dict[index_S] = index_C
         #print(SNVdf.iloc[index_S]["START"], SNVdf.iloc[index_S]["END"] )
         SNVdf["START"].iloc[index_S] = CNAdf["START"][index_C]
@@ -71,7 +68,7 @@ def group_rows_with_gaps(df):
   result_df = result_df.append(current_group, ignore_index=True)
   return result_df
 
-def find_most_common_values(lst):
+def find_most_common_values(lst, inPerc):
 	# Get count of each element in the list
 	count_dict = Counter(lst)
 
@@ -82,13 +79,13 @@ def find_most_common_values(lst):
 
 	# Calculate the percentage of times the most common value occurs in the list
 	perc = (most_common_count / len(lst)) * 100
-	if perc >= 90:
+	if perc >= inPerc*100:
 		return most_common_value, most_common_count
 	else:
 		return -1, -1
         
 # find columns specific CNAs
-def getCloneCNAs(CNAdf, clusters, SNVdf):
+def getCloneCNAs(CNAdf, clusters, SNVdf, inPerc, interPerc):
   print(CNAdf.head())
   print(SNVdf.head())
   merged_df = pd.merge(CNAdf, SNVdf, on=['CHROM', 'START', 'END'])
@@ -103,12 +100,12 @@ def getCloneCNAs(CNAdf, clusters, SNVdf):
     for c in clusters:
       cells = clusters[c]
       cns = row[cells].tolist()
-      val, count = find_most_common_values(cns)
+      val, count = find_most_common_values(cns, inPerc)
       if val == -1 or val == 2:
         continue
       # how many other cells have this CNA
       num_freq = CNAonly.iloc[index].value_counts()[val] - count
-      if num_freq < 0.05 *(CNAonly.shape[1] - 3 - len(cells)):
+      if num_freq < interPerc *(CNAonly.shape[1] - 3 - len(cells)):
         # unique CNA to this group
         #print(c, index, num_freq, val,CNAonly.shape[1] - 3 - len(cells))
         newRow = {"CHROM":row["CHROM"], "START":row['START'],"END": row['END'], "CN":val}
@@ -130,87 +127,103 @@ def getCloneCNAs(CNAdf, clusters, SNVdf):
 
   return uniqueCNAs, SNV2CNA
 
-SNVdf = pd.read_csv(SNVCN, sep="\t")
-CNAdf = pd.read_csv(CNACN, sep="\t")
 
-SNVdfCP = getBins(SNVdf, CNAdf)
-# remove common CNAs from CNAs cells to reduce run time
-CNAdfCP = CNAdf.drop(["CHROM","START","END"], axis = 1)
 
 def check_row(row):
     return row.value_counts(normalize=True).iloc[0] > 0.6
-# Apply the function to each row of the dataframe
-CNAdfCP["filter"] = CNAdf.apply(check_row, axis=1)
-CNAdfCP["CHROM"] = CNAdf["CHROM"]
-CNAdfCP["START"] = CNAdf["START"]
-CNAdfCP["END"] = CNAdf["END"]
-CNAdfCP = CNAdfCP[CNAdfCP['filter'] != True]
-CNAdfCP = CNAdfCP.drop(["filter"], axis = 1)
-print(CNAdfCP.head())
-# cluster CNA cells
-CN = CNAdfCP.drop(["CHROM","START","END"], axis = 1)
-CN = CN.values.T
-clusterable_embedding = umap.UMAP(
-		n_neighbors=3,
-		min_dist=0.0,
-		n_components=3,
-		random_state=42,
-).fit_transform(CN)
-labels = hdbscan.HDBSCAN(
-	min_samples=3,
-	min_cluster_size=3,
-	metric = "manhattan"
-).fit_predict(clusterable_embedding)
 
-# get cluster for each cell
-clusters = {}
-CNAcells = CNAdf.columns.to_list()[3:]
-CNAcells = np.array(CNAcells)
-for i in range(max(labels) + 1):
-    ind = np.where(labels == i)
-    clusters[i] = CNAcells[ind[0]]
+def main(SNVCN, CNACN, SNVcell, CNAcell, percBin, inPerc, interPerc):
+  SNVdf = pd.read_csv(SNVCN, sep="\t")
+  CNAdf = pd.read_csv(CNACN, sep="\t")
 
-uniqueCNAs, SNV2CNA = getCloneCNAs(CNAdfCP, clusters, SNVdfCP)
-revealDict = {}
-for c in SNV2CNA:
-  if c == "CN":
-    continue
-  for i in range(len(SNV2CNA[c])):
-    print(c, SNV2CNA[c][i], len(uniqueCNAs[i]) )
-    if len(uniqueCNAs[i]) < 10:
+  SNVdfCP = getBins(SNVdf, CNAdf, percBin)
+  # remove common CNAs from CNAs cells to reduce run time
+  CNAdfCP = CNAdf.drop(["CHROM","START","END"], axis = 1)
+  # Apply the function to each row of the dataframe
+  CNAdfCP["filter"] = CNAdf.apply(check_row, axis=1)
+  CNAdfCP["CHROM"] = CNAdf["CHROM"]
+  CNAdfCP["START"] = CNAdf["START"]
+  CNAdfCP["END"] = CNAdf["END"]
+  CNAdfCP = CNAdfCP[CNAdfCP['filter'] != True]
+  CNAdfCP = CNAdfCP.drop(["filter"], axis = 1)
+  print(CNAdfCP.head())
+  # cluster CNA cells
+  CN = CNAdfCP.drop(["CHROM","START","END"], axis = 1)
+  CN = CN.values.T
+  clusterable_embedding = umap.UMAP(
+      n_neighbors=3,
+      min_dist=0.0,
+      n_components=3,
+      random_state=42,
+  ).fit_transform(CN)
+  labels = hdbscan.HDBSCAN(
+    min_samples=3,
+    min_cluster_size=3,
+    metric = "manhattan"
+  ).fit_predict(clusterable_embedding)
+
+  # get cluster for each cell
+  clusters = {}
+  CNAcells = CNAdf.columns.to_list()[3:]
+  CNAcells = np.array(CNAcells)
+  for i in range(max(labels) + 1):
+      ind = np.where(labels == i)
+      clusters[i] = CNAcells[ind[0]]
+
+  uniqueCNAs, SNV2CNA = getCloneCNAs(CNAdfCP, clusters, SNVdfCP, inPerc, interPerc)
+  revealDict = {}
+  for c in SNV2CNA:
+    if c == "CN":
       continue
-    if SNV2CNA[c][i]/ len(uniqueCNAs[i]) >= 0.8:
-      if c not in revealDict:
-        revealDict[c] = clusters[i].tolist()
-      else:
-        revealDict[c].extend(clusters[i].tolist())
+    for i in range(len(SNV2CNA[c])):
+      print(c, SNV2CNA[c][i], len(uniqueCNAs[i]) )
+      if len(uniqueCNAs[i]) < 10:
+        continue
+      if SNV2CNA[c][i]/ len(uniqueCNAs[i]) >= 0.8:
+        if c not in revealDict:
+          revealDict[c] = clusters[i].tolist()
+        else:
+          revealDict[c].extend(clusters[i].tolist())
 
-f = open(CNAcell, "r")
-CNAcell2id = {}
-lines = f.readlines()
-CNAcell2id = {}
-for line in lines:
-	cell = line.rstrip().split()[6]
-	id = line.rstrip().split()[0]
-	CNAcell2id[cell] = id
-f.close()
+  f = open(CNAcell, "r")
+  CNAcell2id = {}
+  lines = f.readlines()
+  CNAcell2id = {}
+  for line in lines:
+    cell = line.rstrip().split()[6]
+    id = line.rstrip().split()[0]
+    CNAcell2id[cell] = id
+  f.close()
 
-f = open(SNVcell,"r")
-lines = f.readlines()
-SNVcell2id = {}
-for line in lines:
-	cell = line.rstrip().split()[1]
-	id = line.rstrip().split()[0]
-	SNVcell2id[cell] = id
-f.close()
+  f = open(SNVcell,"r")
+  lines = f.readlines()
+  SNVcell2id = {}
+  for line in lines:
+    cell = line.rstrip().split()[1]
+    id = line.rstrip().split()[0]
+    SNVcell2id[cell] = id
+  f.close()
 
-#f = open("reveal1.tsv", "w")
-for key in revealDict:
-	SNVid = SNVcell2id[key]
-	for v in revealDict[key]:
-		if v not in CNAcell2id:
-			continue
-		CNAid = CNAcell2id[v]
-		print(str(CNAid) + "\t" + str(SNVid) )
-		#f.write(str(CNAid) + "\t" + str(SNVid) + "\n")
-#f.close()
+  #f = open("reveal1.tsv", "w")
+  for key in revealDict:
+    SNVid = SNVcell2id[key]
+    for v in revealDict[key]:
+      if v not in CNAcell2id:
+        continue
+      CNAid = CNAcell2id[v]
+      print(str(CNAid) + "\t" + str(SNVid) )
+      #f.write(str(CNAid) + "\t" + str(SNVid) + "\n")
+  #f.close()
+
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser()
+  parser.add_argument("-snvcell", help="snv cell list with id")
+  parser.add_argument("-cnacell", help="input CNA tree with id and names for CNA cells")
+  parser.add_argument("-snvcn", help="copy number profile for snv cell")
+  parser.add_argument("-cnacn", help="copy number profile for cna cell")
+  parser.add_argument("-percBin", help="percentage of reciporcal overlapping between two bins to be considered as same bin", default=0.9)
+  parser.add_argument("-percIncluster", help="min percent of a SNV found in this cluster to be consider as unique SNV of this cluster", default=0.9)
+  parser.add_argument("-percIntercluster", help="max percent of a SNV found in other clusters to be consider as unique SNV of this cluster", default=0.05)
+  args = parser.parse_args()
+  main(args.snvcn, args.cnacn, args.snvcell, args.cnacell, args.percBin, args.percIncluster, args.percIntercluster)
+   
