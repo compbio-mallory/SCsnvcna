@@ -1,4 +1,4 @@
-Note: This repository contains scripts that were developed for "SCsnvcna: Integrating SNVs and CNAs on a phylogenetic tree from single-cell DNA sequencing data". 
+Note: This repository contains scripts that were developed for "Integrating SNVs and CNAs on a phylogenetic tree from single-cell DNA sequencing data" November 22, 2023, doi:10.1101/gr.277249.122. 
 
 Authors: Liting Zhang, Hank Bass, Jerome Irianto, and Xian Mallory. 
 
